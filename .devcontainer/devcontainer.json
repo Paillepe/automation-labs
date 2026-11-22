@@ -6,7 +6,7 @@
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1.10.3": { "moby": false }
   },
   "remoteEnv": {
-    // Chemin du dépôt vu par le démon Docker de l'hôte : à utiliser pour toute montée de fichiers.
+    // Chemin du dépôt sur l'hôte : lu par « usine doctor » (dépôt posé sur le disque Windows). Aucune montée de fichiers.
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
     "PATH": "${containerWorkspaceFolder}/scripts:${containerEnv:PATH}"
   },
