@@ -78,6 +78,8 @@ pull() {
   return 1
 }
 
+indent() { sed 's/^/      /'; }
+
 # Interroge app-test depuis db-test (même réseau) : ne dépend ni du poste, ni du contenu de l'image de l'étudiant.
 probe() {
   docker exec db-test wget -q -T 2 -O - "http://app-test:8080$1" 2>/dev/null
@@ -113,17 +115,17 @@ export APP_TEST_IMAGE="${digest:-$ref}"
 [[ -n "$digest" ]] && info "Condensat : ${digest#*@}"
 
 # --- Lancement ------------------------------------------------------------------------------------------------
-ensure_network
+ensure_network "$USINE_NETWORK"
 if ! out="$(compose up --detach --wait db-test 2>&1)"; then
   fail "La base de test db-test ne démarre pas."
-  sed 's/^/      /' <<<"$out" | tail -n 5
-  docker logs --tail 10 db-test 2>&1 | sed 's/^/      /' || true
+  tail -n 5 <<<"$out" | indent
+  docker logs --tail 10 db-test 2>&1 | indent || true
   exit 1
 fi
 ok "Base de test db-test prête"
 if ! out="$(compose up --detach app-test 2>&1)"; then
   fail "app-test n'a pas pu être créé."
-  sed 's/^/      /' <<<"$out" | tail -n 5
+  tail -n 5 <<<"$out" | indent
   exit 1
 fi
 
@@ -133,7 +135,7 @@ until probe /ready >/dev/null; do
   if ((SECONDS >= deadline)); then
     fail "app-test ne devient pas prête en $WAIT_SECONDS s."
     hint "Dernières lignes de ses logs (docker logs app-test) :"
-    docker logs --tail 10 app-test 2>&1 | sed 's/^/      /' || true
+    docker logs --tail 10 app-test 2>&1 | indent || true
     exit 1
   fi
   sleep 1
