@@ -1,0 +1,7 @@
+# Réglages du script de service /etc/init.d/reservations (format shell). Les valeurs ci-dessous sont les défauts.
+# L'environnement de l'application (APP_COMMIT, DB_HOST…) ne va pas ici, mais dans ENV_FILE.
+#APP_DIR=/opt/reservations
+#APP_ENTRY=src/server.js
+#APP_USER=deploy
+#ENV_FILE=/etc/reservations/reservations.env
+#LOG_FILE=/var/log/reservations/reservations.log

@@ -9,3 +9,5 @@ rancher/k3s:v1.37.2-k3s1@sha256:21ea6e0fac4e3930c2ce8aa40ddd41a8b18cb3e9a0222c03
 # Lot 0 — conteneurs auxiliaires de k3d 5.9.0 (répartiteur de charge, outils), tirés par « k3d cluster create »
 ghcr.io/k3d-io/k3d-proxy:5.9.0@sha256:7be40abfeb6ac9a81d0d4157a7cbf3aacc68a64a1780ca2efb160f1aea915177
 ghcr.io/k3d-io/k3d-tools:5.9.0@sha256:c57abce697e66feeb826922718738fe186b47779312d49d4e51e6fb9b8a6f34d
+# F0 — application (image de base du Dockerfile de app/) et Node.js 24 de l'image serveur
+node:24.22.3-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0

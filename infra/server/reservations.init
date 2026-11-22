@@ -1,0 +1,107 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          reservations
+# Required-Start:    $network $remote_fs
+# Required-Stop:     $network $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Service de réservation des médiathèques de Valmorin
+### END INIT INFO
+#
+# Lance le code déposé dans APP_DIR (node APP_ENTRY) sous l'utilisateur APP_USER, avec les variables de ENV_FILE.
+# La sortie de l'application (logs JSON) va dans LOG_FILE.
+# Usage : service reservations start|stop|restart|status
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+NAME=reservations
+APP_DIR=/opt/reservations
+APP_ENTRY=src/server.js
+APP_USER=deploy
+ENV_FILE=/etc/reservations/reservations.env
+LOG_FILE=/var/log/reservations/reservations.log
+PID_FILE=/run/reservations.pid
+NODE=/usr/local/bin/node
+
+# shellcheck disable=SC1091 # fichier du serveur, absent du dépôt
+[ -r /etc/default/reservations ] && . /etc/default/reservations
+
+is_running() {
+  start-stop-daemon --status --pidfile "$PID_FILE"
+}
+
+do_start() {
+  if is_running; then
+    echo "$NAME : déjà démarré (pid $(cat "$PID_FILE"))."
+    return 0
+  fi
+  if [ ! -f "$APP_DIR/$APP_ENTRY" ]; then
+    echo "$NAME : aucun code déployé ($APP_DIR/$APP_ENTRY introuvable)." >&2
+    return 1
+  fi
+  if ! id "$APP_USER" >/dev/null 2>&1; then
+    echo "$NAME : l'utilisateur $APP_USER n'existe pas." >&2
+    return 1
+  fi
+  mkdir -p "$(dirname "$LOG_FILE")"
+  touch "$LOG_FILE"
+  chown "$APP_USER" "$(dirname "$LOG_FILE")" "$LOG_FILE"
+  if [ ! -r "$ENV_FILE" ]; then
+    echo "$NAME : attention, pas de fichier d'environnement ($ENV_FILE) : valeurs par défaut." >&2
+  fi
+  (
+    # Les variables du fichier d'environnement sont exportées vers l'application, et vers elle seule.
+    set -a
+    # shellcheck disable=SC1090
+    [ -r "$ENV_FILE" ] && . "$ENV_FILE"
+    set +a
+    exec start-stop-daemon --start --quiet --background --make-pidfile --pidfile "$PID_FILE" \
+      --chuid "$APP_USER" --chdir "$APP_DIR" --output "$LOG_FILE" --exec "$NODE" -- "$APP_ENTRY"
+  ) || {
+    echo "$NAME : échec du lancement." >&2
+    return 1
+  }
+  # Une application qui refuse de démarrer (réglage manquant) s'arrête aussitôt : on le dit, avec ses logs.
+  sleep 1
+  if ! is_running; then
+    echo "$NAME : l'application s'est arrêtée au démarrage. Dernières lignes de $LOG_FILE :" >&2
+    tail -n 5 "$LOG_FILE" >&2
+    rm -f "$PID_FILE"
+    return 1
+  fi
+  echo "$NAME : démarré (pid $(cat "$PID_FILE"))."
+}
+
+do_stop() {
+  if ! is_running; then
+    rm -f "$PID_FILE"
+    echo "$NAME : déjà arrêté."
+    return 0
+  fi
+  # SIGTERM, puis 20 s pour s'arrêter proprement, puis SIGKILL.
+  start-stop-daemon --stop --quiet --pidfile "$PID_FILE" --remove-pidfile --retry TERM/20/KILL/5 --oknodo
+  echo "$NAME : arrêté."
+}
+
+case "$1" in
+  start) do_start ;;
+  start-if-deployed)
+    [ -f "$APP_DIR/$APP_ENTRY" ] || exit 0
+    do_start
+    ;;
+  stop) do_stop ;;
+  restart | force-reload)
+    do_stop && do_start
+    ;;
+  status)
+    if is_running; then
+      echo "$NAME : en marche (pid $(cat "$PID_FILE"))."
+      exit 0
+    fi
+    echo "$NAME : arrêté."
+    exit 3
+    ;;
+  *)
+    echo "Usage : service $NAME {start|stop|restart|status}" >&2
+    exit 2
+    ;;
+esac
