@@ -1,0 +1,7 @@
+.DS_Store
+node_modules/
+# État jetable : tout se reconstruit depuis project/ (usine rebuild).
+.terraform/
+*.tfstate
+*.tfstate.*
+.usine/

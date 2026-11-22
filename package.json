@@ -1,0 +1,11 @@
+{
+  "name": "automation-labs",
+  "private": true,
+  "description": "Automatisation – Usine Logicielle, en labs othila-lab",
+  "scripts": {
+    "lab": "lab"
+  },
+  "devDependencies": {
+    "@othila-academy/lab": "0.13.0"
+  }
+}

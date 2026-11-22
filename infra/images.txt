@@ -1,0 +1,11 @@
+# Images des 4 jours, épinglées par condensat (digest). « usine pull » les télécharge toutes.
+# Une référence par ligne : nom:étiquette@sha256:… — l'étiquette sert à la lecture, le condensat fait foi.
+# Fichier en AJOUT SEUL (deux flux y écrivent) : ajoute tes lignes à la fin, ne réordonne rien.
+
+# Lot 0 — socle
+debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
+postgres:18-alpine@sha256:0115267ab5a509022df9319c77be365cef335adb71556c75f60f5360ee247e71
+rancher/k3s:v1.37.2-k3s1@sha256:21ea6e0fac4e3930c2ce8aa40ddd41a8b18cb3e9a0222c030dc005e7e88c4332
+# Lot 0 — conteneurs auxiliaires de k3d 5.9.0 (répartiteur de charge, outils), tirés par « k3d cluster create »
+ghcr.io/k3d-io/k3d-proxy:5.9.0@sha256:7be40abfeb6ac9a81d0d4157a7cbf3aacc68a64a1780ca2efb160f1aea915177
+ghcr.io/k3d-io/k3d-tools:5.9.0@sha256:c57abce697e66feeb826922718738fe186b47779312d49d4e51e6fb9b8a6f34d

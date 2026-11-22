@@ -1,0 +1,16 @@
+---
+# Spike : Ansible joint les serveurs en SSH, installe un paquet et pilote un service sans systemd.
+- name: Installer et démarrer nginx
+  hosts: web
+  become: true
+  tasks:
+    - name: Installer nginx
+      ansible.builtin.apt:
+        name: nginx-light
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Démarrer nginx par son script d'init
+      ansible.builtin.service:
+        name: nginx
+        state: started

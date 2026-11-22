@@ -1,0 +1,30 @@
+{
+  "name": "automation-labs",
+  "build": { "dockerfile": "Dockerfile" },
+  "features": {
+    // Le démon Docker de l'hôte : serveurs, cluster et monitoring tournent à côté du devcontainer (ADR-0001).
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1.10.3": { "moby": false }
+  },
+  "remoteEnv": {
+    // Chemin du dépôt vu par le démon Docker de l'hôte : à utiliser pour toute montée de fichiers.
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
+    "PATH": "${containerWorkspaceFolder}/scripts:${containerEnv:PATH}"
+  },
+  // Rien ne démarre d'office : la mémoire est comptée.
+  "postCreateCommand": "npm ci",
+  // Après un redémarrage du devcontainer, le réseau de l'usine existe peut-être déjà : on s'y rattache.
+  "postStartCommand": "scripts/usine attach",
+  "hostRequirements": { "cpus": 4, "memory": "8gb" },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "redhat.vscode-yaml",
+        "hashicorp.terraform",
+        "redhat.ansible",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "timonwong.shellcheck",
+        "github.vscode-github-actions"
+      ]
+    }
+  }
+}

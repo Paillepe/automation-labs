@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# usine — point d'entrée unique de l'infrastructure du cours.
+# Répartiteur : chaque commande vit dans scripts/usine.d/<commande>.sh (voir scripts/usine.d/LISEZMOI.md).
+set -euo pipefail
+
+USINE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+USINE_D="$USINE_ROOT/scripts/usine.d"
+export USINE_ROOT USINE_D
+
+usage() {
+  echo "Usage : usine <commande> [arguments]"
+  echo
+  echo "Commandes :"
+  local file name desc
+  for file in "$USINE_D"/*.sh; do
+    name="$(basename "$file" .sh)"
+    [[ "$name" == _* ]] && continue
+    desc="$(sed -n 's/^# usine: //p' "$file" | head -n 1)"
+    printf '  %-10s %s\n' "$name" "$desc"
+  done
+}
+
+cmd="${1:-help}"
+[[ $# -gt 0 ]] && shift
+
+case "$cmd" in
+  help | -h | --help)
+    usage
+    exit 0
+    ;;
+esac
+
+# Un nom de commande est un mot simple : jamais un chemin, jamais un fichier interne (_lib.sh).
+if [[ ! "$cmd" =~ ^[a-z][a-z0-9-]*$ || ! -f "$USINE_D/$cmd.sh" ]]; then
+  echo "usine : commande inconnue « $cmd »." >&2
+  echo >&2
+  usage >&2
+  exit 2
+fi
+
+exec bash "$USINE_D/$cmd.sh" "$@"

@@ -1,0 +1,3 @@
+# Les fichiers sourcés se résolvent depuis le dossier du script analysé.
+source-path=SCRIPTDIR
+external-sources=true

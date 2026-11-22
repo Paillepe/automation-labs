@@ -1,0 +1,237 @@
+# Spike mémoire J4 : gabarit de mesure, PAS la fourniture du cours (celle-ci vient du flux Fournitures, infra/k8s).
+# Cluster + 3 réplicas d'une application Node + PostgreSQL + Prometheus, Alertmanager, Grafana, Loki, Alloy.
+apiVersion: v1
+kind: Namespace
+metadata: { name: spike-j4 }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: app, namespace: spike-j4 }
+data:
+  server.js: |
+    // Remplaçant de l'application fil rouge : un serveur HTTP Node qui journalise en JSON et expose /metrics.
+    const http = require('http');
+    let n = 0;
+    http.createServer((req, res) => {
+      n++;
+      if (req.url === '/metrics') { res.end(`# TYPE http_requests_total counter\nhttp_requests_total{status="200"} ${n}\n`); return; }
+      console.log(JSON.stringify({ t: new Date().toISOString(), level: 'info', path: req.url, status: 200, id: n }));
+      res.end('ok\n');
+    }).listen(3000);
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: app, namespace: spike-j4 }
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: app } }
+  template:
+    metadata:
+      labels: { app: app }
+      annotations: { prometheus.io/scrape: "true", prometheus.io/port: "3000" }
+    spec:
+      containers:
+        - name: app
+          image: node:24-alpine
+          command: ["node", "/app/server.js"]
+          ports: [{ containerPort: 3000 }]
+          volumeMounts: [{ name: app, mountPath: /app }]
+      volumes: [{ name: app, configMap: { name: app } }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: app, namespace: spike-j4 }
+spec: { selector: { app: app }, ports: [{ port: 80, targetPort: 3000 }] }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata: { name: app, namespace: spike-j4 }
+spec:
+  rules:
+    - host: app.spike
+      http: { paths: [{ path: /, pathType: Prefix, backend: { service: { name: app, port: { number: 80 } } } }] }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: db, namespace: spike-j4 }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: db } }
+  template:
+    metadata: { labels: { app: db } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          env: [{ name: POSTGRES_PASSWORD, value: mot-de-passe-de-lab }]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: observer, namespace: spike-j4 }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata: { name: spike-j4-observer }
+rules:
+  - apiGroups: [""]
+    resources: [nodes, nodes/proxy, nodes/metrics, services, endpoints, pods, pods/log, namespaces]
+    verbs: [get, list, watch]
+  - nonResourceURLs: [/metrics, /metrics/cadvisor]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: { name: spike-j4-observer }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: spike-j4-observer }
+subjects: [{ kind: ServiceAccount, name: observer, namespace: spike-j4 }]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: prometheus, namespace: spike-j4 }
+data:
+  prometheus.yml: |
+    global: { scrape_interval: 15s, evaluation_interval: 15s }
+    alerting: { alertmanagers: [{ static_configs: [{ targets: ["alertmanager:9093"] }] }] }
+    rule_files: [/etc/prometheus/rules.yml]
+    scrape_configs:
+      - job_name: pods
+        kubernetes_sd_configs: [{ role: pod }]
+        relabel_configs:
+          - { source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape], regex: "true", action: keep }
+          - { source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_annotation_prometheus_io_port], regex: "(.+);(.+)", replacement: "$1:$2", target_label: __address__ }
+          - { source_labels: [__meta_kubernetes_pod_name], target_label: pod }
+      - job_name: cadvisor
+        scheme: https
+        metrics_path: /metrics/cadvisor
+        tls_config: { insecure_skip_verify: true }
+        authorization: { credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token }
+        kubernetes_sd_configs: [{ role: node }]
+  rules.yml: |
+    groups:
+      - name: spike
+        rules:
+          - alert: Temoin
+            expr: vector(1)
+            labels: { severity: info }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: prometheus, namespace: spike-j4 }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: prometheus } }
+  template:
+    metadata: { labels: { app: prometheus } }
+    spec:
+      serviceAccountName: observer
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.16.0
+          args: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=6h"]
+          volumeMounts: [{ name: config, mountPath: /etc/prometheus }]
+      volumes: [{ name: config, configMap: { name: prometheus } }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: prometheus, namespace: spike-j4 }
+spec: { selector: { app: prometheus }, ports: [{ port: 9090 }] }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: alertmanager, namespace: spike-j4 }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: alertmanager } }
+  template:
+    metadata: { labels: { app: alertmanager } }
+    spec:
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.35.0
+---
+apiVersion: v1
+kind: Service
+metadata: { name: alertmanager, namespace: spike-j4 }
+spec: { selector: { app: alertmanager }, ports: [{ port: 9093 }] }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: grafana, namespace: spike-j4 }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: grafana } }
+  template:
+    metadata: { labels: { app: grafana } }
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:13.2.6
+---
+apiVersion: v1
+kind: Service
+metadata: { name: grafana, namespace: spike-j4 }
+spec: { selector: { app: grafana }, ports: [{ port: 3000 }] }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: loki, namespace: spike-j4 }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: loki } }
+  template:
+    metadata: { labels: { app: loki } }
+    spec:
+      containers:
+        - name: loki
+          image: grafana/loki:3.6.22
+          args: ["-config.file=/etc/loki/local-config.yaml"]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: loki, namespace: spike-j4 }
+spec: { selector: { app: loki }, ports: [{ port: 3100 }] }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: alloy, namespace: spike-j4 }
+data:
+  config.alloy: |
+    discovery.kubernetes "pods" {
+      role = "pod"
+      namespaces { names = ["spike-j4"] }
+    }
+    discovery.relabel "pods" {
+      targets = discovery.kubernetes.pods.targets
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "app"
+      }
+    }
+    loki.source.kubernetes "pods" {
+      targets    = discovery.relabel.pods.output
+      forward_to = [loki.write.default.receiver]
+    }
+    loki.write "default" {
+      endpoint { url = "http://loki:3100/loki/api/v1/push" }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: alloy, namespace: spike-j4 }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: alloy } }
+  template:
+    metadata: { labels: { app: alloy } }
+    spec:
+      serviceAccountName: observer
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.22.0
+          args: ["run", "/etc/alloy/config.alloy", "--storage.path=/tmp/alloy"]
+          volumeMounts: [{ name: config, mountPath: /etc/alloy }]
+      volumes: [{ name: config, configMap: { name: alloy } }]
