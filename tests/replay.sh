@@ -37,12 +37,18 @@ ensure_act() {
     curl -fsSL "https://github.com/nektos/act/releases/download/v$ACT_VERSION/act_Linux_$arch.tar.gz" | tar -xz -C "$dir" act || return 1
   fi
   export PATH="$dir:$PATH"
+  # act 0.2.98 refuse les envois d'upload-artifact v6 : .othila-lab/shared/act.mjs joue v6 par cette copie de v4.
+  [[ -d "$HOME/.cache/usine/upload-artifact-v4" ]] \
+    || git clone --quiet --depth 1 --branch v4 https://github.com/actions/upload-artifact "$HOME/.cache/usine/upload-artifact-v4"
 }
 
 # --- Étapes de rejeu : ce que l'étudiant fait à la main et que usine rebuild ne refait pas ---------------------
 replay_steps() {
   local lab="$1"
   case "$lab" in
+    demarrage)
+      (cd app && npm ci --no-audit --no-fund)
+      ;;
     script)
       project/deploy/deploy.sh HEAD
       ;;

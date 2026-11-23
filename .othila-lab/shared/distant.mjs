@@ -58,3 +58,14 @@ export async function requireOrigin() {
   if (!repo) throw new Error("Attendu : un dépôt distant origin qui pointe vers ton fork sur GitHub. Constaté : aucun. Lab demarrage : gh repo fork --remote.");
   return repo;
 }
+
+// Un check sur le poste de l'étudiant (dépôts distants, compte GitHub) : le rejeu n'a pas de poste, il le saute.
+export const poste = ({ id, label, run: check }) => ({
+  id,
+  label: `${label} (poste, non rejoué en CI)`,
+  passesOnStart: REPLAY,
+  run: async (ctx) => {
+    if (REPLAY) return;
+    await check(ctx);
+  }
+});
