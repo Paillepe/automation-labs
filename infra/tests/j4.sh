@@ -106,7 +106,7 @@ fi
 section "Répartition par pod (working set)"
 docker exec "$USINE_CLUSTER_NODE" crictl stats -o json | jq -r '.stats[]
   | [(.attributes.labels["io.kubernetes.pod.namespace"] + "/" + .attributes.labels["io.kubernetes.container.name"]),
-     ((.memory.workingSetBytes.value | tonumber) / 1048576 | floor)] | "  \(.[1]) Mio\t\(.[0])"' | sort -rn
+     ((.memory.workingSetBytes.value // "0" | tonumber) / 1048576 | floor)] | "  \(.[1]) Mio\t\(.[0])"' | sort -rn
 section "Preuves que tout tournait"
 kubectl get --raw '/api/v1/namespaces/monitoring/services/prometheus:9090/proxy/api/v1/query?query=sum(http_requests_total%7Bjob%3D%22reservations%22%7D)' \
   | jq -r '"  requêtes servies (Prometheus) : \(.data.result[0].value[1] // "?")"'
