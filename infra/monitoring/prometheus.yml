@@ -1,0 +1,62 @@
+# Prometheus fourni (lab monitoring). L'étudiant n'écrit que ses règles : project/monitoring/rules/*.yml,
+# chargées depuis /etc/prometheus/rules par « usine up monitoring » (ConfigMap, aucune montée de fichiers).
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+  - /etc/prometheus/rules/*.yaml
+
+scrape_configs:
+  # L'application, où qu'elle tourne dans le cluster : tout pod Running dont un conteneur exécute l'image
+  # reservations:<version>, sur son port 8080, sans annotation à poser par l'étudiant.
+  - job_name: reservations
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_container_image]
+        regex: "(docker\\.io/library/)?reservations:.+"
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_phase]
+        regex: Running
+        action: keep
+      # Un conteneur qui déclare plusieurs ports donnerait plusieurs cibles : on garde 8080, ou l'absence de port.
+      - source_labels: [__meta_kubernetes_pod_container_port_number]
+        regex: "(8080)?"
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_ip]
+        regex: "(.+)"
+        replacement: "$1:8080"
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        target_label: container
+
+  # CPU et mémoire de chaque conteneur, et ses limites (container_spec_*), lus par le kubelet (cAdvisor).
+  - job_name: cadvisor
+    scheme: https
+    metrics_path: /metrics/cadvisor
+    tls_config:
+      insecure_skip_verify: true
+    authorization:
+      credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    kubernetes_sd_configs:
+      - role: node
+    metric_relabel_configs:
+      # Les séries sans conteneur (agrégats par pod, cgroups système) doublonnent : on ne garde que les conteneurs.
+      - source_labels: [container]
+        regex: ""
+        action: drop
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

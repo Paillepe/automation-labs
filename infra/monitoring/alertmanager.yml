@@ -1,0 +1,6 @@
+# Routage par défaut, tant que project/monitoring/alertmanager.yml n'existe pas : les alertes ne vont nulle part.
+# Le récepteur local (receiver) n'en reçoit qu'une fois le routage de l'étudiant en place.
+route:
+  receiver: nulle-part
+receivers:
+  - name: nulle-part

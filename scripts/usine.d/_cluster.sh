@@ -233,6 +233,24 @@ cluster_db_up() {
     kubectl -n data rollout status deploy/db --timeout=120s >/dev/null || die "la base « db » ne démarre pas : kubectl -n data get pods."
   }
   ok "Base de données prête (db.data:5432)"
+  cluster_provided_up
+}
+
+# Ce qu'un incident en cours a changé du côté fourni, et qui doit survivre à un cluster recréé (« usine rebuild »
+# supprime tout) : déposé par le script de l'incident dans .usine/provided/, relu ici, après la base.
+#   hooks/*.sh    scripts sourcés dans l'ordre, avec les fonctions de ce fichier
+#   k8s/*.yaml    objets appliqués tels quels
+cluster_provided_up() {
+  local dir="$USINE_STATE/provided" hook
+  [[ -d "$dir" ]] || return 0
+  for hook in "$dir"/hooks/*.sh; do
+    [[ -f "$hook" ]] || continue
+    # shellcheck source=/dev/null
+    source "$hook" || die "le script fourni par l'incident en cours a échoué : ${hook#"$USINE_ROOT"/}."
+  done
+  if compgen -G "$dir/k8s/*.yaml" >/dev/null; then
+    kubectl apply -f "$dir/k8s/" >/dev/null || die "impossible d'appliquer .usine/provided/k8s/."
+  fi
 }
 
 cluster_down() {

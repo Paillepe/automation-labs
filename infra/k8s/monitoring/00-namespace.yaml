@@ -1,0 +1,8 @@
+# Stack de monitoring fournie (lab monitoring), dans l'espace de noms « monitoring ».
+# Appliquée par « usine up monitoring », qui crée aussi les ConfigMaps : la configuration fournie vient de
+# infra/monitoring/, celle de l'étudiant de project/monitoring/ (règles, routage, tableaux de bord).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels: { app.kubernetes.io/part-of: usine }
