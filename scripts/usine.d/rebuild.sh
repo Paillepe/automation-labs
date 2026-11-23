@@ -75,6 +75,15 @@ if k8s_manifests; then
   done
   kubectl apply -f "$PROJECT/k8s/" >/dev/null
   ok "manifests de project/k8s/ appliqués"
+  # Chaque Deployment décrit doit être disponible avant de passer à la suite (supervision, incident).
+  while read -r kind name ns; do
+    [[ "$kind" == Deployment ]] || continue
+    if kubectl rollout status "deployment/$name" -n "${ns:-default}" --timeout=180s >/dev/null 2>&1; then
+      ok "Deployment $name disponible"
+    else
+      warn "Deployment $name pas disponible au bout de 180 s : kubectl get pods -n ${ns:-default}"
+    fi
+  done < <(kubectl get -f "$PROJECT/k8s/" -o jsonpath='{range .items[*]}{.kind} {.metadata.name} {.metadata.namespace}{"\n"}{end}' 2>/dev/null || true)
 else
   skip "pas de manifests dans project/k8s/"
 fi

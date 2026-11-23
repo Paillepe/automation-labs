@@ -65,6 +65,16 @@ replay_steps() {
         scripts/usine incident derive && terraform -chdir=project/infra apply -input=false -auto-approve >/dev/null
       fi
       ;;
+    monitoring)
+      # Comme l'étudiant : la panne, du trafic, puis une référence d'erreur lue dans les logs, recopiée au diagnostic.
+      if [[ -f scripts/usine.d/incident.sh && -f infra/incidents/erreurs.sh ]]; then
+        local url="${USINE_INGRESS_URL:-http://k3d-${USINE_CLUSTER:-usine}-serverlb}" ref
+        scripts/usine incident erreurs
+        for _ in $(seq 1 300); do curl -s -o /dev/null -m 2 "$url/api/sites" || true; done
+        ref="$(kubectl logs -l app.kubernetes.io/name=reservations --tail=-1 --max-log-requests=10 | grep -o 'ERR-[0-9A-F]\{8\}' | head -n 1)"
+        [[ -n "$ref" ]] && printf -- '- %s\n' "$ref" >>project/monitoring/DIAGNOSTIC.md
+      fi
+      ;;
     *) : ;;
   esac
 }
@@ -136,6 +146,11 @@ counts() {
 }
 
 # --- Chaîne ----------------------------------------------------------------------------------------------------
+step "Définitions des labs (tests/definitions.test.mjs)"
+node --test "$ROOT/tests/definitions.test.mjs" >"$LOGS/definitions.log" 2>&1 \
+  || { say "  ✗ définitions non conformes : $LOGS/definitions.log"; exit 1; }
+say "  ✓ conformes"
+
 # act sert au check du workflow (lab pipeline-ci), joué dans les clones : il doit être dans le PATH dès ici.
 ensure_act || say "⚠ act introuvable et non téléchargeable : le check local du lab pipeline-ci échouera"
 

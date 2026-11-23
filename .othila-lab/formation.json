@@ -37,6 +37,24 @@
       "labs": [
         "ansible"
       ]
+    },
+    {
+      "title": "J3 après-midi",
+      "labs": [
+        "cluster"
+      ]
+    },
+    {
+      "title": "J4 matin",
+      "labs": [
+        "resilience"
+      ]
+    },
+    {
+      "title": "J4 après-midi",
+      "labs": [
+        "monitoring"
+      ]
     }
   ]
 }
