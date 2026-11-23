@@ -159,8 +159,17 @@ cluster_create() {
     info "Téléchargement de k3s (« usine pull » l'aurait fait chez toi)…"
     docker pull --quiet "$k3s" >/dev/null || die "impossible de télécharger $k3s."
   }
+  # Tests seulement (infra/tests/cluster.sh) : USINE_CLUSTER_OFFLINE=1 interdit au cluster tout téléchargement
+  # d'image, pour prouver que tout ce qu'il lance vient de l'import (le réseau de l'école ne décide de rien).
+  local extra=()
+  if [[ "${USINE_CLUSTER_OFFLINE:-}" == 1 ]]; then
+    local registries
+    registries="$(mktemp)"
+    printf 'mirrors:\n  "*":\n    endpoint: ["http://127.0.0.1:9"]\n' >"$registries"
+    extra=(--registry-config "$registries" --k3s-arg "--disable-default-registry-endpoint@server:*")
+  fi
   info "Création du cluster « $USINE_CLUSTER » (un nœud, environ 30 s)…"
-  if ! out="$(k3d cluster create "$USINE_CLUSTER" --network "$USINE_NETWORK" --image "$k3s" \
+  if ! out="$(k3d cluster create "$USINE_CLUSTER" --network "$USINE_NETWORK" --image "$k3s" "${extra[@]}" \
     --servers 1 --agents 0 \
     --api-port "127.0.0.1:$USINE_API_PORT" \
     -p "127.0.0.1:$USINE_INGRESS_PORT:80@loadbalancer" \
@@ -228,15 +237,17 @@ cluster_db_up() {
 
 cluster_down() {
   title "Cluster Kubernetes (k3d)"
+  # Le kubeconfig est-il celui qu'usine a écrit ? À regarder avant k3d, qui en retire le cluster en le supprimant.
+  local file ours=0
+  file="$(kubeconfig_path)"
+  if [[ -f "$file" ]] && grep -q "k3d-$USINE_CLUSTER" "$file"; then ours=1; fi
   if cluster_exists; then
     k3d cluster delete "$USINE_CLUSTER" >/dev/null 2>&1 || die "impossible de supprimer le cluster."
     ok "Cluster supprimé (base de données et monitoring compris)"
   else
     ok "Aucun cluster"
   fi
-  local file
-  file="$(kubeconfig_path)"
-  if [[ -f "$file" ]] && grep -q "k3d-$USINE_CLUSTER" "$file"; then rm -f "$file"; fi
+  if [[ "$ours" == 1 ]]; then rm -f "$file"; fi
 }
 
 cluster_status() {
