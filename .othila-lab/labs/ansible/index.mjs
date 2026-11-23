@@ -31,9 +31,9 @@ Les cinq étapes sont le socle. Pistes sans check : mise à jour serveur par ser
 devant les deux serveurs.
 Après npx lab catchup ansible : usine rebuild.
 
-Inspiré du lab `troubleshooting/idempotence-perfs` du catalogue `ansible-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
-Inspiré du lab `vault/chiffrer-fichier-variable` du catalogue `ansible-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
-Inspiré du lab `ecrire-code/handlers` du catalogue `ansible-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab \`troubleshooting/idempotence-perfs\` du catalogue \`ansible-training\` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab \`vault/chiffrer-fichier-variable\` du catalogue \`ansible-training\` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab \`ecrire-code/handlers\` du catalogue \`ansible-training\` de Stéphane Robert — blog.stephane-robert.info — adapté.
 Pour aller plus loin, après le cours : https://github.com/stephrobert/ansible-training`;
 export const objectives = [
   'décrire ses serveurs dans un inventaire et les joindre en SSH',

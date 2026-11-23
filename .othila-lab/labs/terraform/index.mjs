@@ -24,8 +24,8 @@ Fourni : project/infra/ (provider, variables, les deux images, sorties attendues
 Étapes srv-test à derive : le socle. Étape bonus-variable : facultative.
 Après npx lab catchup terraform : usine rebuild.
 
-Inspiré du lab `aws/import-moved-drift` du catalogue `terraform-dsoxlab-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
-Inspiré du lab `first-infra/virtual-network` du catalogue `terraform-dsoxlab-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab \`aws/import-moved-drift\` du catalogue \`terraform-dsoxlab-training\` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab \`first-infra/virtual-network\` du catalogue \`terraform-dsoxlab-training\` de Stéphane Robert — blog.stephane-robert.info — adapté.
 Pour aller plus loin, après le cours : https://github.com/stephrobert/terraform-dsoxlab-training`;
 export const objectives = [
   'décrire des réseaux, des serveurs et une base dans des fichiers Terraform',

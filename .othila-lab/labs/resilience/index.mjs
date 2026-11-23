@@ -27,9 +27,9 @@ ils comptent les requêtes en échec, jamais des durées. Jeton d'injection de p
 Étapes replicas à procedure : le socle. Étape bonus-production : facultative.
 Après npx lab catchup resilience : usine rebuild.
 
-Inspiré du lab `ckad-probes-all-types` du catalogue `kubernetes-dsoxlab-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
-Inspiré du lab `ckad-rolling-update-strategy` du catalogue `kubernetes-dsoxlab-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
-Inspiré du lab `ckad-secret-injection-protection` du catalogue `kubernetes-dsoxlab-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab \`ckad-probes-all-types\` du catalogue \`kubernetes-dsoxlab-training\` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab \`ckad-rolling-update-strategy\` du catalogue \`kubernetes-dsoxlab-training\` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab \`ckad-secret-injection-protection\` du catalogue \`kubernetes-dsoxlab-training\` de Stéphane Robert — blog.stephane-robert.info — adapté.
 Pour aller plus loin, après le cours : https://github.com/stephrobert/kubernetes-dsoxlab-training`;
 export const objectives = [
   'faire tourner plusieurs réplicas, avec des sondes et des ressources bornées',
