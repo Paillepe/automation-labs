@@ -3,6 +3,8 @@
 set -euo pipefail
 # shellcheck source=_lib.sh
 source "$USINE_D/_lib.sh"
+# shellcheck source=_registry.sh
+source "$USINE_D/_registry.sh"
 
 usage() {
   cat <<'EOF'
@@ -33,46 +35,11 @@ compose() {
   APP_TEST_IMAGE="${APP_TEST_IMAGE:-unused}" USINE_NETWORK="$USINE_NETWORK" docker compose -f "$COMPOSE_FILE" "$@"
 }
 
-# ghcr.io/<propriétaire>/<dépôt>, en minuscules, d'après origin.
-registry_image() {
-  if [[ -n "${USINE_REGISTRY_IMAGE:-}" ]]; then
-    echo "$USINE_REGISTRY_IMAGE"
-    return
-  fi
-  local url path
-  url="$(git -C "$USINE_ROOT" remote get-url origin 2>/dev/null)" \
-    || die "aucun dépôt distant « origin » : ton fork n'est pas configuré (lab demarrage)."
-  path="$(sed -E -e 's#^(git@github\.com:|ssh://git@github\.com/|https://([^@/]+@)?github\.com/)##' -e 's#\.git$##' -e 's#/$##' <<<"$url")"
-  [[ "$path" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] \
-    || die "origin ne pointe pas vers un dépôt GitHub ($url) : impossible de deviner ton registre."
-  echo "ghcr.io/${path,,}"
-}
-
-# Une référence vise-t-elle un registre (premier segment avec un point, deux-points, ou localhost) ?
-is_remote() {
-  local first="${1%%/*}"
-  [[ "$1" == */* && ("$first" == *.* || "$first" == *:* || "$first" == localhost) ]]
-}
-
+# Échec du téléchargement : ce qu'il faut regarder.
 pull() {
-  local ref="$1" err
-  err="$(mktemp)"
-  if docker pull --quiet "$ref" >/dev/null 2>"$err"; then
-    rm -f "$err"
-    return 0
-  fi
-  # Paquet privé : on réessaie avec le jeton de gh, s'il est connecté.
-  if [[ "$ref" == ghcr.io/* ]] && grep -qiE 'denied|unauthorized|authentication' "$err" && gh auth status >/dev/null 2>&1; then
-    info "Accès refusé sans authentification : connexion à ghcr.io avec le jeton de gh."
-    if gh auth token | docker login ghcr.io -u "$(gh api user --jq .login)" --password-stdin >/dev/null 2>&1 \
-      && docker pull --quiet "$ref" >/dev/null 2>"$err"; then
-      rm -f "$err"
-      return 0
-    fi
-  fi
-  fail "Image introuvable ou inaccessible : $ref"
-  hint "$(tail -n 1 "$err")"
-  rm -f "$err"
+  registry_pull "$1" && return 0
+  fail "Image introuvable ou inaccessible : $1"
+  hint "$REGISTRY_ERROR"
   hint "Ton pipeline a-t-il publié ce commit ? Regarde « gh run list » et les paquets de ton dépôt sur GitHub."
   hint "Paquet privé : « gh auth refresh -s read:packages », puis relance « usine deploy test »."
   return 1
@@ -91,7 +58,8 @@ if [[ "$arg" == */* || "$arg" == *:* ]]; then
   ref="$arg"
 else
   tag="${arg:-$(git -C "$USINE_ROOT" rev-parse HEAD)}"
-  ref="$(registry_image):$tag"
+  registry_image || die "$REGISTRY_ERROR"
+  ref="$REGISTRY_IMAGE:$tag"
 fi
 
 require_docker
@@ -108,9 +76,7 @@ else
 fi
 
 # On lance l'image par son condensat : ce qui tourne est exactement ce qui est dans le registre.
-repo="${ref%@*}"
-repo="${repo%:*}"
-digest="$(docker image inspect "$ref" --format '{{range .RepoDigests}}{{println .}}{{end}}' | grep -F "$repo@" | head -n 1 || true)"
+digest="$(registry_digest "$ref")"
 export APP_TEST_IMAGE="${digest:-$ref}"
 [[ -n "$digest" ]] && info "Condensat : ${digest#*@}"
 
