@@ -1,0 +1,44 @@
+# Alertmanager. Routage : ConfigMap alertmanager-config (project/monitoring/alertmanager.yml, sinon le routage
+# par défaut de infra/monitoring/, qui n'envoie rien). Un seul réplica : la grappe est désactivée.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels: { app.kubernetes.io/name: alertmanager, app.kubernetes.io/part-of: usine }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app.kubernetes.io/name: alertmanager } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: alertmanager, app.kubernetes.io/part-of: usine }
+      annotations: { usine/config: "@config@" }
+    spec:
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.35.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --config.file=/etc/alertmanager/alertmanager.yml
+            - --storage.path=/alertmanager
+            - --cluster.listen-address=
+          ports: [{ name: http, containerPort: 9093 }]
+          readinessProbe: { httpGet: { path: /-/ready, port: http }, periodSeconds: 5 }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+          volumeMounts:
+            - { name: config, mountPath: /etc/alertmanager }
+            - { name: data, mountPath: /alertmanager }
+      volumes:
+        - { name: config, configMap: { name: alertmanager-config } }
+        - { name: data, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: alertmanager, namespace: monitoring, labels: { app.kubernetes.io/name: alertmanager } }
+spec:
+  type: NodePort
+  selector: { app.kubernetes.io/name: alertmanager }
+  ports: [{ name: http, port: 9093, targetPort: http, nodePort: 30093 }]

@@ -56,10 +56,10 @@ release_one() {
   target="$RELEASE_NAME:$version"
   title "Version $version → $target"
 
-  # Version fournie par l'équipe de développement pendant l'épreuve : elle ne se remplace pas.
+  # Version fournie par un incident en cours (.usine/provided/<version>) : elle ne se remplace pas.
   if [[ -f "$USINE_STATE/provided/$version" ]]; then
-    image_present "$target" || die "la version $version fournie par l'incident en cours est absente du poste : relance « usine incident epreuve »."
-    ok "Version fournie par l'équipe de développement (incident en cours) : elle n'est ni tirée ni reconstruite."
+    image_present "$target" || die "la version $version fournie par l'incident en cours est absente du poste : relance l'incident (usine incident status)."
+    ok "Version fournie par l'équipe de développement : elle n'est ni tirée ni reconstruite."
     SOURCE=provided REF="$target" DIGEST="" COMMIT=""
   else
     if [[ "$mode" == local ]]; then

@@ -1,0 +1,11 @@
+# Fournisseur de tableaux de bord : les fichiers JSON de project/monitoring/dashboards/, en lecture seule.
+apiVersion: 1
+providers:
+  - name: project
+    folder: Valmorin
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 10
+    options:
+      path: /etc/grafana/dashboards
