@@ -8,7 +8,8 @@ export const instructions = `Quelqu'un « dépanne » l'infrastructure à la mai
   usine incident derive
 Ne cherche pas avec docker : demande à Terraform ce qui a changé.
   cd project/infra && terraform plan
-Lis le plan : quelle ressource, quel attribut, quelle valeur. Puis remets la réalité en conformité avec le code :
+Lis le plan : quelles ressources, et pour chacune ~ (modifier sur place) ou + (créer). Puis remets la réalité en
+conformité avec le code :
   terraform apply
   terraform plan -detailed-exitcode ; echo $?      0 de nouveau
 Écris en deux lignes, pour ta correction, ce que le plan a montré.
@@ -26,10 +27,11 @@ export const checks = [
   },
   {
     id: 'apres-derive-isolation',
-    label: "srv-web-2 est toujours sur front et back, et db n'a toujours aucun port publié",
+    label: "srv-web-2 tourne de nouveau sur front et back, et db existe, sans aucun port publié",
     run: async () => {
       await requireDocker();
       const web = await inspect('srv-web-2');
+      assert(web?.State?.Running, `Attendu : srv-web-2 démarré. Constaté : ${web ? web.State.Status : 'absent'}. terraform apply le remet comme le code le décrit.`);
       const nets = Object.keys(web?.NetworkSettings?.Networks ?? {});
       assert(nets.includes('front') && nets.includes('back'), `Attendu : srv-web-2 sur front et back. Constaté : ${nets.join(', ') || 'absent'}.`);
       const db = await inspect('db');
@@ -41,7 +43,7 @@ export const checks = [
 
 export const hints = [
   'Que dit terraform plan, ligne par ligne, juste après l’incident ? Les symboles ~, + et - disent modifier, créer, détruire.',
-  'Le plan compare le code et la réalité : ce qu’il veut changer, c’est ce que l’incident a modifié. apply le remet comme le code le décrit.',
+  'Le plan compare le code, le state et la réalité : un conteneur arrêté se lit en ~ (modifier), un conteneur disparu en + (créer). apply remet tout comme le code le décrit.',
   'cd project/infra ; terraform plan (lire) ; terraform apply ; terraform plan -detailed-exitcode doit rendre 0.'
 ];
 

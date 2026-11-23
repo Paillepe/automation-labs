@@ -71,7 +71,14 @@ replay_steps() {
         local url="${USINE_INGRESS_URL:-http://k3d-${USINE_CLUSTER:-usine}-serverlb}" ref
         scripts/usine incident erreurs
         for _ in $(seq 1 300); do curl -s -o /dev/null -m 2 "$url/api/sites" || true; done
-        ref="$(kubectl logs -l app.kubernetes.io/name=reservations --tail=-1 --max-log-requests=10 | grep -o 'ERR-[0-9A-F]\{8\}' | head -n 1)"
+        # La référence attendue est celle dont usine incident erreurs a noté l'empreinte ; à défaut, la première.
+        local want refs
+        want="$(sed -n 's/^ERROR_REF_SHA256=//p' .usine/incidents/erreurs.env 2>/dev/null || true)"
+        refs="$(kubectl logs -l app.kubernetes.io/name=reservations --tail=-1 --max-log-requests=10 | grep -o 'ERR-[0-9A-F]\{8\}' | sort -u)"
+        ref="$(head -n 1 <<<"$refs")"
+        if [[ -n "$want" ]]; then
+          ref="$(while read -r r; do [[ "$(printf '%s' "$r" | sha256sum | cut -d' ' -f1)" == "$want" ]] && echo "$r"; done <<<"$refs" | head -n 1)"
+        fi
         [[ -n "$ref" ]] && printf -- '- %s\n' "$ref" >>project/monitoring/DIAGNOSTIC.md
       fi
       ;;
