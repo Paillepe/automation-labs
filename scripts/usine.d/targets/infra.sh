@@ -22,33 +22,36 @@ target_up() {
   }
   info "terraform init…"
   local out
-  if ! out="$(infra_tf init -input=false 2>&1)"; then
+  if ! out="$(infra_tf init -input=false -no-color 2>&1)"; then
     fail "terraform init échoue."
     tail -n 8 <<<"$out" | sed 's/^/      /'
     return 1
   fi
   info "terraform apply…"
-  if ! out="$(infra_tf apply -input=false -auto-approve 2>&1)"; then
+  if ! out="$(infra_tf apply -input=false -auto-approve -no-color 2>&1)"; then
     fail "terraform apply échoue."
     tail -n 12 <<<"$out" | sed 's/^/      /'
     return 1
   fi
   ok "$(grep -E '^Apply complete' <<<"$out" || echo 'terraform apply terminé')"
   local net
-  for net in "${INFRA_NETWORKS[@]}"; do attach_self "$net"; done
+  attach_self front # le devcontainer joint les serveurs web, jamais la base
   ensure_lab_key
 }
 
 target_down() {
   local self net names
   self="$(self_container)"
+  # Le devcontainer d'abord : un réseau où il est encore rattaché ne se supprime pas.
+  for net in "${INFRA_NETWORKS[@]}"; do
+    [[ -z "$self" ]] || docker network disconnect -f "$net" "$self" >/dev/null 2>&1 || true
+  done
   if [[ -f "$INFRA_DIR/terraform.tfstate" ]] && infra_tf state list >/dev/null 2>&1; then
     infra_tf destroy -input=false -auto-approve >/dev/null 2>&1 || warn "terraform destroy a échoué : nettoyage par les noms"
   fi
   # Ce qui resterait d'un autre state (un autre clone, un rejeu) : les conteneurs des réseaux front et back.
   for net in "${INFRA_NETWORKS[@]}"; do
     docker network inspect "$net" >/dev/null 2>&1 || continue
-    [[ -z "$self" ]] || docker network disconnect -f "$net" "$self" >/dev/null 2>&1 || true
     names="$(docker network inspect "$net" --format '{{range .Containers}}{{.Name}} {{end}}')"
     # shellcheck disable=SC2086 # une liste de noms
     [[ -z "${names// /}" ]] || docker rm -f $names >/dev/null 2>&1 || true

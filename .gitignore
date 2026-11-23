@@ -5,3 +5,6 @@ node_modules/
 *.tfstate
 *.tfstate.*
 .usine/
+
+# Terraform : verrou des providers, propre à la plateforme du poste (le provider vient du miroir local).
+.terraform.lock.hcl

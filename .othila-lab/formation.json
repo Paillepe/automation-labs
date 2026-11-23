@@ -19,6 +19,18 @@
       "labs": [
         "pipeline-ci"
       ]
+    },
+    {
+      "title": "J2 matin",
+      "labs": [
+        "livraison"
+      ]
+    },
+    {
+      "title": "J2 après-midi",
+      "labs": [
+        "terraform"
+      ]
     }
   ]
 }
