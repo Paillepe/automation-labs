@@ -31,6 +31,12 @@
       "labs": [
         "terraform"
       ]
+    },
+    {
+      "title": "J3 matin",
+      "labs": [
+        "ansible"
+      ]
     }
   ]
 }

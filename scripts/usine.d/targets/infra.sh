@@ -37,6 +37,12 @@ target_up() {
   local net
   attach_self front # le devcontainer joint les serveurs web, jamais la base
   ensure_lab_key
+  local name
+  if [[ -n "$(self_container)" ]]; then
+    for name in $(docker ps --filter 'name=^srv-web-' --format '{{.Names}}' | sort); do
+      wait_ssh "$name" 30 || warn "$name n'accepte pas encore la clé de lab en SSH"
+    done
+  fi
 }
 
 target_down() {

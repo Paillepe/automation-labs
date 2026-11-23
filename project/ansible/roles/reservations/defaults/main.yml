@@ -1,0 +1,12 @@
+# Squelette fourni (lab ansible) : les valeurs par défaut du rôle reservations.
+# Le commit et la version déployés : ceux du dépôt, sur le poste qui lance le playbook (comme deploy.sh HEAD).
+app_commit: "{{ lookup('ansible.builtin.pipe', 'git -C ' ~ playbook_dir ~ ' rev-parse HEAD') }}"
+app_version: "1.0.0"
+# Où l'archive de la version est fabriquée, sur le poste (le devcontainer).
+repo_root: "{{ playbook_dir }}/../.."
+build_archive: "/tmp/reservations-{{ app_commit }}.tgz"
+# La base, sur le réseau back (lab terraform).
+db_host: db
+db_name: reservations
+db_user: reservations
+# db_password : à définir dans group_vars, à partir du secret chiffré par Vault.
