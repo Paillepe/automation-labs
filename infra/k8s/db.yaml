@@ -1,0 +1,78 @@
+# Base de données fournie dans le cluster (labs cluster, resilience, monitoring, épreuve).
+# Appliquée par « usine up cluster ». L'étudiant ne la modifie pas : son application s'y connecte.
+#   hôte db.data (Service « db », espace de noms « data »), port 5432, base et utilisateur « reservations ».
+# Identifiants de LAB, sans valeur hors de ce cours. Les données vivent sur un volume du cluster : elles
+# survivent au redémarrage du pod, pas à « usine down cluster ».
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: data
+  labels: { app.kubernetes.io/part-of: usine }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+  namespace: data
+  labels: { app.kubernetes.io/part-of: usine }
+type: Opaque
+stringData:
+  POSTGRES_DB: reservations
+  POSTGRES_USER: reservations
+  POSTGRES_PASSWORD: lab-cluster-password
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-data
+  namespace: data
+  labels: { app.kubernetes.io/part-of: usine }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: data
+  labels: { app.kubernetes.io/name: db, app.kubernetes.io/part-of: usine }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: db }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: db, app.kubernetes.io/part-of: usine }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef: { name: db-credentials }
+          ports:
+            - { name: postgres, containerPort: 5432 }
+          readinessProbe:
+            exec: { command: [pg_isready, -U, reservations, -d, reservations] }
+            periodSeconds: 3
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: db-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: data
+  labels: { app.kubernetes.io/name: db, app.kubernetes.io/part-of: usine }
+spec:
+  selector: { app.kubernetes.io/name: db }
+  ports:
+    - { name: postgres, port: 5432, targetPort: postgres }

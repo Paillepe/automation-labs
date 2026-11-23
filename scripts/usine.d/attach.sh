@@ -8,3 +8,7 @@ source "$USINE_D/_lib.sh"
 docker_ok || exit 0
 attach_self || true
 ensure_lab_key || true
+# Cluster k3d (flux Fournitures) : après une reconstruction du devcontainer, ~/.kube est vide.
+# shellcheck source=_cluster.sh
+source "$USINE_D/_cluster.sh"
+if cluster_exists && cluster_running; then cluster_kubeconfig || true; fi

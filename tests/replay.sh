@@ -195,7 +195,10 @@ for lab in "${labs[@]}"; do
 done
 
 step "Nettoyage : usine down"
-(cd "$ROOT" && scripts/usine down >/dev/null 2>&1) || true
+# USINE_REBUILD_KEEP : cibles laissées en place (deux sessions de préparation sur le même démon Docker).
+keep=" ${USINE_REBUILD_KEEP:-} "
+mapfile -t clean < <(for f in "$ROOT"/scripts/usine.d/targets/*.sh; do t="$(basename "$f" .sh)"; [[ "$keep" == *" $t "* ]] || echo "$t"; done)
+(cd "$ROOT" && scripts/usine down "${clean[@]}" >/dev/null 2>&1) || true
 
 [[ -z "$details" ]] || printf '\n## Checks hors règle\n%s' "$details" >>"$REPORT"
 cp "$REPORT" "$LOGS/report.md"

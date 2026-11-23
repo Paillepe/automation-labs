@@ -1,5 +1,5 @@
+#!/usr/bin/env bash
 # Cible « servers » : srv-test (labs demarrage à livraison). infra/compose.servers.yaml.
-# shellcheck shell=bash
 
 servers_compose() {
   USINE_NETWORK="$USINE_NETWORK" docker compose -f "$USINE_ROOT/infra/compose.servers.yaml" "$@"

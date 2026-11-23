@@ -21,26 +21,16 @@ Contrat d'une commande :
 
 ## Cibles de `usine up`, `usine down`, `usine status`
 
-`up.sh`, `down.sh` et `status.sh` (flux Chaîne) ne connaissent aucune cible : chacune vit dans son propre fichier,
-`scripts/usine.d/_target-<nom>.sh`, qui définit trois fonctions :
-
-```bash
-target_up()     { …; }   # démarre la cible et attend qu'elle soit saine ; idempotent
-target_down()   { …; }   # arrête et supprime la cible, volumes compris ; sans erreur si elle est déjà arrêtée
-target_status() { …; }   # une ou deux lignes « info » : ce qui tourne
-```
-
-Le fichier est sourcé dans un sous-shell, après `_lib.sh` : toutes ses fonctions sont disponibles.
-`usine down` sans argument arrête toutes les cibles, dans l'ordre de `USINE_TARGET_ORDER` (`_lib.sh`) :
-`monitoring cluster test infra servers`, puis les autres.
+Une cible par fichier, `scripts/usine.d/targets/<cible>.sh`, qui définit `target_up`, `target_down` et
+`target_status` (contrat dans `_targets.sh`). `usine down` sans argument : toutes les cibles, par ordre alphabétique.
 
 | Cible | Fichier | Flux |
 |---|---|---|
-| `servers` | `_target-servers.sh` (srv-test, `infra/compose.servers.yaml`) | Chaîne |
-| `test` | `_target-test.sh` (arrêt seulement ; le démarrage est `usine deploy test`) | Chaîne |
-| `infra` | `_target-infra.sh` (le Terraform de `project/infra/`) | Chaîne |
-| `cluster` | `_target-cluster.sh` | Fournitures (F1) |
-| `monitoring` | `_target-monitoring.sh` | Fournitures (F1) |
+| `servers` | srv-test, `infra/compose.servers.yaml` | Chaîne |
+| `infra` | le Terraform de `project/infra/` (réseaux `front` et `back`, `srv-web-*`, `db`) ; `down` supprime aussi le state | Chaîne |
+| `test` | app-test et db-test (arrêt seulement ; le démarrage est `usine deploy test`) | Fournitures |
+| `cluster` | k3d, images importées, base de données | Fournitures |
+| `monitoring` | stack de supervision | Fournitures |
 
 ## `usine rebuild` (flux Chaîne)
 

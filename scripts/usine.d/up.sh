@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
-# usine: Démarre une cible et attend qu'elle soit saine : usine up servers | infra | cluster | monitoring
+# usine: Démarre une ou plusieurs cibles et attend qu'elles soient saines : usine up <cible…>
 set -euo pipefail
 # shellcheck source=_lib.sh
 source "$USINE_D/_lib.sh"
+# shellcheck source=_targets.sh
+source "$USINE_D/_targets.sh"
 
-if [[ $# -eq 0 || "$1" == -h || "$1" == --help ]]; then
-  echo "Usage : usine up <cible…>   (cibles : $(list_targets | tr '\n' ' '))"
-  [[ $# -eq 0 ]] && exit 2 || exit 0
-fi
-require_docker
-for target in "$@"; do
-  title "Démarrage : $target"
-  run_target up "$target"
-done
+[[ $# -gt 0 ]] || die "précise une cible : usine up <cible…> (cibles : $(target_names))."
+for target in "$@"; do require_target "$target"; done
+for target in "$@"; do run_target "$target" up; done

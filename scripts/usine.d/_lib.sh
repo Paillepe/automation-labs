@@ -104,41 +104,6 @@ ensure_lab_key() {
   cmp -s "$src" "$dst" 2>/dev/null || install -m 0600 "$src" "$dst"
 }
 
-# --- Cibles de « usine up | down | status » ---------------------------------------------------------------------
-# Une cible est un fichier _target-<nom>.sh qui définit target_up, target_down et target_status (voir LISEZMOI.md).
-# L'ordre d'arrêt de « usine down » sans argument : du plus haut au plus bas de la pile.
-USINE_TARGET_ORDER=(monitoring cluster test infra servers)
-
-target_file() { echo "$USINE_D/_target-$1.sh"; }
-
-# Les cibles connues, dans l'ordre d'arrêt : celles de USINE_TARGET_ORDER, puis les autres par ordre alphabétique.
-list_targets() {
-  local name file seen=" "
-  for name in "${USINE_TARGET_ORDER[@]}"; do
-    [[ -f "$(target_file "$name")" ]] && { echo "$name"; seen+="$name "; }
-  done
-  for file in "$USINE_D"/_target-*.sh; do
-    [[ -f "$file" ]] || continue
-    name="$(basename "$file" .sh)"
-    name="${name#_target-}"
-    [[ "$seen" == *" $name "* ]] || echo "$name"
-  done
-}
-
-# Joue une action (up, down, status) d'une cible, dans un sous-shell : les cibles ne se marchent pas dessus.
-run_target() {
-  local action="$1" name="$2" file
-  shift 2
-  file="$(target_file "$name")"
-  [[ "$name" =~ ^[a-z][a-z0-9-]*$ && -f "$file" ]] \
-    || die "cible inconnue « $name » (cibles : $(list_targets | tr '\n' ' '))"
-  (
-    # shellcheck source=/dev/null
-    source "$file"
-    "target_$action" "$@"
-  )
-}
-
 # État d'un conteneur (running, exited…), ou « absent ».
 container_state() {
   local state

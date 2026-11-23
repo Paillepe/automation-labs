@@ -1,6 +1,6 @@
+#!/usr/bin/env bash
 # Cible « infra » : ce que décrit le Terraform de l'étudiant (project/infra/) — réseaux front et back, srv-web-*, db.
 # « usine up infra » joue terraform apply ; « usine down infra » détruit et nettoie ce qui resterait d'un autre state.
-# shellcheck shell=bash
 
 INFRA_DIR="$USINE_ROOT/project/infra"
 INFRA_NETWORKS=(front back)

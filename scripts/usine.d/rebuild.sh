@@ -3,13 +3,15 @@
 set -euo pipefail
 # shellcheck source=_lib.sh
 source "$USINE_D/_lib.sh"
+# shellcheck source=_targets.sh
+source "$USINE_D/_targets.sh"
 
 # Chaque étape s'annonce et ne s'exécute que si ses fichiers existent dans project/. Tout ce qui tournait avant est
 # supprimé d'abord : conteneurs, state Terraform, cluster et volumes sont jetables, le code du projet fait foi.
 PROJECT="$USINE_ROOT/project"
 usine() { bash "$USINE_ROOT/scripts/usine" "$@"; }
 have_command() { [[ -f "$USINE_D/$1.sh" ]]; }
-have_target() { [[ -f "$(target_file "$1")" ]]; }
+have_target() { [[ -f "$USINE_D/targets/$1.sh" ]]; }
 skip() { info "— $* : rien à reconstruire"; }
 
 infra_declared() {
@@ -27,19 +29,22 @@ require_docker
 echo "usine rebuild — reconstruction depuis project/"
 
 title "1/6 Nettoyage : tout ce qui tournait est supprimé"
-usine down >/dev/null
+# USINE_REBUILD_KEEP (formateur seulement) : cibles à ne pas supprimer, par exemple « cluster monitoring »
+# quand deux sessions de préparation partagent le même démon Docker. Vide en séance.
+mapfile -t clean < <(for t in $(target_names); do [[ " ${USINE_REBUILD_KEEP:-} " == *" $t "* ]] || echo "$t"; done)
+usine down "${clean[@]}" >/dev/null
 ok "environnement vide"
 
 title "2/6 Serveur de test srv-test"
 if infra_declared; then
   skip "les serveurs sont décrits dans project/infra/ (srv-test n'existe plus depuis le lab terraform)"
 else
-  run_target up servers
+  run_target servers up
 fi
 
 title "3/6 Infrastructure (project/infra/, terraform apply)"
 if infra_declared; then
-  run_target up infra
+  run_target infra up
 else
   skip "project/infra/ ne décrit aucun conteneur"
 fi
@@ -60,7 +65,7 @@ fi
 title "5/6 Cluster (project/k8s/)"
 if k8s_manifests; then
   have_target cluster || die "project/k8s/ existe mais la cible cluster n'est pas fournie (usine up cluster)."
-  run_target up cluster
+  run_target cluster up
   for version in $(k8s_versions); do
     if have_command release; then
       usine release "$version"
@@ -76,7 +81,7 @@ fi
 
 title "6/6 Supervision (project/monitoring/)"
 if monitoring_files && have_target monitoring; then
-  run_target up monitoring
+  run_target monitoring up
 else
   skip "pas de project/monitoring/, ou cible monitoring non fournie"
 fi

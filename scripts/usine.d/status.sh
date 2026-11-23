@@ -3,12 +3,14 @@
 set -euo pipefail
 # shellcheck source=_lib.sh
 source "$USINE_D/_lib.sh"
+# shellcheck source=_targets.sh
+source "$USINE_D/_targets.sh"
 
 require_docker
 title "Cibles"
-while read -r target; do
-  run_target status "$target" || true
-done < <(list_targets)
+for target in $(target_names); do
+  run_target "$target" status || true
+done
 
 title "Versions servies (/version)"
 found=0
@@ -21,9 +23,10 @@ done
 ((found)) || info "aucun serveur ni conteneur de test en marche"
 
 title "Mémoire (docker stats)"
-mapfile -t running < <(docker ps --format '{{.Names}}' | grep -E '^(srv-|app-test$|db-test$|db$|k3d-|usine-)' || true)
+mapfile -t running < <(docker ps --format '{{.Names}}' | grep -E '^(srv-|app-test$|db-test$|db$|k3d-|usine-)' | grep -v -- '-tools$' || true)
 if [[ "${#running[@]}" -eq 0 ]]; then
   info "aucun conteneur du cours en marche"
 else
-  docker stats --no-stream --format '{{.Name}}\t{{.MemUsage}}' "${running[@]}" | sed 's/^/  /'
+  docker stats --no-stream --format '{{.Name}}\t{{.MemUsage}}' "${running[@]}" 2>/dev/null | sed 's/^/  /' \
+    || info "mesure impossible pour l'instant (un conteneur vient de s'arrêter) : relance usine status"
 fi
