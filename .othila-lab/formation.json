@@ -1,0 +1,16 @@
+{
+  "id": "automation",
+  "title": "Automatisation – Usine logicielle",
+  "lab": "0.13.0",
+  "reference": { "remote": "upstream", "branch": "main" },
+  "seances": [
+    { "title": "J1 matin", "labs": ["demarrage", "script"] },
+    { "title": "J1 après-midi", "labs": ["pipeline-ci"] },
+    { "title": "J2 matin", "labs": ["livraison"] },
+    { "title": "J2 après-midi", "labs": ["terraform"] },
+    { "title": "J3 matin", "labs": ["ansible"] },
+    { "title": "J3 après-midi", "labs": ["cluster"] },
+    { "title": "J4 matin", "labs": ["resilience"] },
+    { "title": "J4 après-midi", "labs": ["monitoring"] }
+  ]
+}

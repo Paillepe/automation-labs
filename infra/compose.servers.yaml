@@ -1,0 +1,22 @@
+# Cible « servers » (labs demarrage à livraison) : srv-test, le serveur que l'on déploie à la main, puis par script.
+# Se pilote par « usine up servers » et « usine down servers ». Supprimé au début du lab terraform.
+# Aucune montée de fichiers (ADR-0001) : l'image se construit depuis le contexte infra/, envoyé au démon par l'API.
+name: usine-servers
+
+services:
+  srv-test:
+    image: usine-server:lab
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: srv-test
+    hostname: srv-test
+    # Depuis le navigateur du poste : http://127.0.0.1:18081/ ; depuis le devcontainer : http://srv-test:8080/
+    ports:
+      - "127.0.0.1:${USINE_SRV_TEST_PORT:-18081}:8080"
+    networks: [usine]
+
+networks:
+  usine:
+    name: ${USINE_NETWORK:-usine}
+    external: true

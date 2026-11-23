@@ -103,3 +103,67 @@ ensure_lab_key() {
   mkdir -p "$HOME/.ssh" && chmod 0700 "$HOME/.ssh"
   cmp -s "$src" "$dst" 2>/dev/null || install -m 0600 "$src" "$dst"
 }
+
+# --- Cibles de « usine up | down | status » ---------------------------------------------------------------------
+# Une cible est un fichier _target-<nom>.sh qui définit target_up, target_down et target_status (voir LISEZMOI.md).
+# L'ordre d'arrêt de « usine down » sans argument : du plus haut au plus bas de la pile.
+USINE_TARGET_ORDER=(monitoring cluster test infra servers)
+
+target_file() { echo "$USINE_D/_target-$1.sh"; }
+
+# Les cibles connues, dans l'ordre d'arrêt : celles de USINE_TARGET_ORDER, puis les autres par ordre alphabétique.
+list_targets() {
+  local name file seen=" "
+  for name in "${USINE_TARGET_ORDER[@]}"; do
+    [[ -f "$(target_file "$name")" ]] && { echo "$name"; seen+="$name "; }
+  done
+  for file in "$USINE_D"/_target-*.sh; do
+    [[ -f "$file" ]] || continue
+    name="$(basename "$file" .sh)"
+    name="${name#_target-}"
+    [[ "$seen" == *" $name "* ]] || echo "$name"
+  done
+}
+
+# Joue une action (up, down, status) d'une cible, dans un sous-shell : les cibles ne se marchent pas dessus.
+run_target() {
+  local action="$1" name="$2" file
+  shift 2
+  file="$(target_file "$name")"
+  [[ "$name" =~ ^[a-z][a-z0-9-]*$ && -f "$file" ]] \
+    || die "cible inconnue « $name » (cibles : $(list_targets | tr '\n' ' '))"
+  (
+    # shellcheck source=/dev/null
+    source "$file"
+    "target_$action" "$@"
+  )
+}
+
+# État d'un conteneur (running, exited…), ou « absent ».
+container_state() {
+  local state
+  state="$(docker container inspect "$1" --format '{{.State.Status}}' 2>/dev/null || true)"
+  echo "${state:-absent}"
+}
+
+# --- SSH vers les serveurs du cours ----------------------------------------------------------------------------
+# Options communes : clé de lab, pas de vérification d'empreinte (les serveurs sont recréés à chaque rebuild).
+USINE_SSH_OPTS=(-i "$HOME/.ssh/usine_lab" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+  -o LogLevel=ERROR -o BatchMode=yes -o ConnectTimeout=3)
+
+lab_ssh() {
+  local host="$1"
+  shift
+  # shellcheck disable=SC2029 # la commande s'exécute sur le serveur : c'est voulu
+  ssh "${USINE_SSH_OPTS[@]}" "deploy@$host" "$@"
+}
+
+# Attend qu'un serveur accepte la clé de lab en SSH (au plus $2 secondes, 30 par défaut).
+wait_ssh() {
+  local host="$1" limit="${2:-30}" deadline
+  deadline=$((SECONDS + limit))
+  until lab_ssh "$host" true 2>/dev/null; do
+    ((SECONDS < deadline)) || return 1
+    sleep 1
+  done
+}

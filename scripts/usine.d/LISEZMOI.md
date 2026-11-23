@@ -18,3 +18,34 @@ Contrat d'une commande :
 
 `_lib.sh` fournit : `title`, `info`, `ok`, `warn`, `fail`, `hint`, `die`, `require_docker`, `list_images`,
 `image_present`, `ensure_network` (crée le réseau et y rattache le devcontainer).
+
+## Cibles de `usine up`, `usine down`, `usine status`
+
+`up.sh`, `down.sh` et `status.sh` (flux Chaîne) ne connaissent aucune cible : chacune vit dans son propre fichier,
+`scripts/usine.d/_target-<nom>.sh`, qui définit trois fonctions :
+
+```bash
+target_up()     { …; }   # démarre la cible et attend qu'elle soit saine ; idempotent
+target_down()   { …; }   # arrête et supprime la cible, volumes compris ; sans erreur si elle est déjà arrêtée
+target_status() { …; }   # une ou deux lignes « info » : ce qui tourne
+```
+
+Le fichier est sourcé dans un sous-shell, après `_lib.sh` : toutes ses fonctions sont disponibles.
+`usine down` sans argument arrête toutes les cibles, dans l'ordre de `USINE_TARGET_ORDER` (`_lib.sh`) :
+`monitoring cluster test infra servers`, puis les autres.
+
+| Cible | Fichier | Flux |
+|---|---|---|
+| `servers` | `_target-servers.sh` (srv-test, `infra/compose.servers.yaml`) | Chaîne |
+| `test` | `_target-test.sh` (arrêt seulement ; le démarrage est `usine deploy test`) | Chaîne |
+| `infra` | `_target-infra.sh` (le Terraform de `project/infra/`) | Chaîne |
+| `cluster` | `_target-cluster.sh` | Fournitures (F1) |
+| `monitoring` | `_target-monitoring.sh` | Fournitures (F1) |
+
+## `usine rebuild` (flux Chaîne)
+
+Supprime tout (`usine down`), puis reconstruit depuis `project/`, chaque étape seulement si ses fichiers existent :
+srv-test (tant que `project/infra/` ne décrit aucun conteneur), `terraform apply`, `ansible-playbook site.yml`,
+cluster (`usine up cluster`, `usine release <v>` pour chaque `image: …reservations:<v>` des manifests,
+`kubectl apply -f project/k8s/`), supervision (`usine up monitoring`). Enfin, si `.usine/incident` existe et que
+`incident.sh` est fourni : `usine incident resume`, qui doit réinjecter l'incident en cours (SPEC §6.4).
