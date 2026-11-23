@@ -13,4 +13,4 @@ usine doctor    # vérifie que ton poste est prêt
 usine help      # les commandes disponibles
 ```
 
-Les labs arrivent mardi matin.
+Le parcours et les commandes des labs : [docs/LABS.md](docs/LABS.md).
