@@ -3,6 +3,7 @@
 # il remplace toute l'infrastructure du poste.
 #
 #   tests/replay.sh [lab…]          sans argument : tous les labs de .othila-lab/formation.json, dans l'ordre
+#   USINE_REPLAY_DEFS=epreuve tests/replay.sh incident     définitions prises dans une référence Git (l'épreuve)
 #
 # Pour chaque lab : un clone du dépôt sur son départ (base ou la solution du lab précédent), puis sur sa solution
 # (solution/<lab>). Dans chaque clone : définitions des labs reprises de l'arbre courant (comme lab update),
@@ -86,6 +87,22 @@ replay_steps() {
   esac
 }
 
+# Avant les checks, sur le départ comme sur la solution : ce que le lab suppose en cours (l'incident de l'épreuve).
+before_checks() {
+  local lab="$1"
+  case "$lab" in
+    incident)
+      # Graine 1 : version-imposee, 10 jours, celle de solution/incident. L'incident reste actif pendant les checks.
+      scripts/usine incident clear >/dev/null 2>&1 || true
+      USINE_SEED=1 scripts/usine incident epreuve
+      local ns
+      ns="$(kubectl get deploy -A --field-selector metadata.name=reservations -o jsonpath='{.items[0].metadata.namespace}' 2>/dev/null)"
+      kubectl rollout status deployment/reservations -n "${ns:-default}" --timeout=180s || true
+      ;;
+    *) : ;;
+  esac
+}
+
 # --- Jouer un état -----------------------------------------------------------------------------------------------
 # play <lab> <state> <tag> : écrit le JSON de lab check dans $WORK/<lab>-<state>.json ; journal dans $LOGS.
 play() {
@@ -99,7 +116,11 @@ play() {
   # Les définitions des labs viennent de la référence du cours, jamais du tag (comme lab update).
   rm -rf "$clone/.othila-lab"
   mkdir -p "$clone/.othila-lab"
-  (cd "$ROOT/.othila-lab" && tar -c --exclude=./local .) | tar -x -C "$clone/.othila-lab"
+  if [[ -n "${USINE_REPLAY_DEFS:-}" ]]; then
+    git -C "$ROOT" archive "$USINE_REPLAY_DEFS" .othila-lab | tar -x -C "$clone"
+  else
+    (cd "$ROOT/.othila-lab" && tar -c --exclude=./local .) | tar -x -C "$clone/.othila-lab"
+  fi
   ln -s "$ROOT/node_modules" "$clone/node_modules"
   (
     cd "$clone" || exit 1
@@ -109,6 +130,7 @@ play() {
       echo "== étapes de rejeu ($lab)" >>"$log"
       replay_steps "$lab" >>"$log" 2>&1 || { echo "!! étapes de rejeu en échec" >>"$log"; exit 1; }
     fi
+    before_checks "$lab" >>"$log" 2>&1 || { echo "!! préparation des checks en échec" >>"$log"; exit 1; }
   )
   local prepared=$?
   ((prepared == 0)) || say "  préparation en échec : les checks sont joués quand même (voir $log)"
@@ -154,14 +176,18 @@ counts() {
 
 # --- Chaîne ----------------------------------------------------------------------------------------------------
 step "Définitions des labs (tests/definitions.test.mjs)"
-node --test "$ROOT/tests/definitions.test.mjs" >"$LOGS/definitions.log" 2>&1 \
+[[ -n "${USINE_REPLAY_DEFS:-}" ]] || node --test "$ROOT/tests/definitions.test.mjs" >"$LOGS/definitions.log" 2>&1 \
   || { say "  ✗ définitions non conformes : $LOGS/definitions.log"; exit 1; }
 say "  ✓ conformes"
 
 # act sert au check du workflow (lab pipeline-ci), joué dans les clones : il doit être dans le PATH dès ici.
 ensure_act || say "⚠ act introuvable et non téléchargeable : le check local du lab pipeline-ci échouera"
 
-mapfile -t chain < <(jq -r '.seances[].labs[]' "$ROOT/.othila-lab/formation.json")
+if [[ -n "${USINE_REPLAY_DEFS:-}" ]]; then
+  mapfile -t chain < <(git -C "$ROOT" show "$USINE_REPLAY_DEFS:.othila-lab/formation.json" | jq -r '.seances[].labs[]')
+else
+  mapfile -t chain < <(jq -r '.seances[].labs[]' "$ROOT/.othila-lab/formation.json")
+fi
 if [[ $# -gt 0 ]]; then labs=("$@"); else labs=("${chain[@]}"); fi
 
 start_of() {
