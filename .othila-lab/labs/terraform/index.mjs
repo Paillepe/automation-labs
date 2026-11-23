@@ -22,7 +22,11 @@ Exigence de l'exercice 3 : les étapes de déploiement sont décrites. Elles le 
 dans la sortie de terraform plan, que vous savez lire.
 Fourni : project/infra/ (provider, variables, les deux images, sorties attendues à décommenter).
 Étapes srv-test à derive : le socle. Étape bonus-variable : facultative.
-Après npx lab catchup terraform : usine rebuild.`;
+Après npx lab catchup terraform : usine rebuild.
+
+Inspiré du lab `aws/import-moved-drift` du catalogue `terraform-dsoxlab-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab `first-infra/virtual-network` du catalogue `terraform-dsoxlab-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Pour aller plus loin, après le cours : https://github.com/stephrobert/terraform-dsoxlab-training`;
 export const objectives = [
   'décrire des réseaux, des serveurs et une base dans des fichiers Terraform',
   'lire un plan, appliquer, et vérifier que la réalité correspond au code',

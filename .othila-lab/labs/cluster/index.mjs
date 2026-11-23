@@ -22,7 +22,11 @@ L'image est celle de votre pipeline (couture avec le lab livraison) : usine rele
 vos manifests. Sans image publiée, ou sans réseau, elle la construit sur votre poste et le dit.
 Tout se décrit dans project/k8s/ et s'applique par kubectl apply -f project/k8s/. Rien à la main.
 Étapes deployer à declaratif : le socle. Étape bonus-rangement : facultative.
-Après npx lab catchup cluster : usine rebuild (il recrée le cluster, recharge l'image et applique vos manifests).`;
+Après npx lab catchup cluster : usine rebuild (il recrée le cluster, recharge l'image et applique vos manifests).
+
+Inspiré du lab `ckad-expose-service` du catalogue `kubernetes-dsoxlab-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab `cka-ingress-path-routing` du catalogue `kubernetes-dsoxlab-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Pour aller plus loin, après le cours : https://github.com/stephrobert/kubernetes-dsoxlab-training`;
 export const objectives = [
   'déployer l’image publiée par son pipeline sur un cluster Kubernetes',
   'exposer l’application dans le cluster (Service) puis à l’extérieur (Ingress)',

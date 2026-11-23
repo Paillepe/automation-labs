@@ -29,7 +29,12 @@ Node.js est déjà sur les serveurs : rien à installer.
 Commandes, depuis project/ansible/ : export ANSIBLE_CONFIG=$PWD/ansible.cfg (une fois par terminal).
 Les cinq étapes sont le socle. Pistes sans check : mise à jour serveur par serveur (serial: 1), un reverse proxy
 devant les deux serveurs.
-Après npx lab catchup ansible : usine rebuild.`;
+Après npx lab catchup ansible : usine rebuild.
+
+Inspiré du lab `troubleshooting/idempotence-perfs` du catalogue `ansible-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab `vault/chiffrer-fichier-variable` du catalogue `ansible-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Inspiré du lab `ecrire-code/handlers` du catalogue `ansible-training` de Stéphane Robert — blog.stephane-robert.info — adapté.
+Pour aller plus loin, après le cours : https://github.com/stephrobert/ansible-training`;
 export const objectives = [
   'décrire ses serveurs dans un inventaire et les joindre en SSH',
   'porter un script de déploiement dans un rôle Ansible, tâche par tâche',
