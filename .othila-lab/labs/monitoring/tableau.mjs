@@ -1,17 +1,17 @@
 import { assert } from '@othila-academy/lab';
 import { grafana, query } from '../../shared/supervision.mjs';
 
-// Les tableaux de bord du projet : ceux que Grafana a chargés depuis project/monitoring/ (pas ceux fournis par le cours).
+// Les tableaux de bord du projet : ceux que Grafana a chargés depuis project/monitoring/dashboards/, dossier « Valmorin ».
 async function dashboards() {
   const list = await grafana('/api/search?type=dash-db');
-  return (list ?? []).filter((d) => !(d.tags ?? []).includes('usine'));
+  return (list ?? []).filter((d) => d.folderTitle === 'Valmorin');
 }
 
 export const title = 'Un tableau de bord qui répond';
 export const explain = 'Si tu ne gardais qu’un panneau pour l’astreinte, lequel, et pourquoi ?';
-export const instructions = `Construis un tableau de bord dans Grafana (http://127.0.0.1:18300, admin / lab-grafana) : au moins le débit de
+export const instructions = `Construis un tableau de bord dans Grafana (http://127.0.0.1:18300) : au moins le débit de
 requêtes par statut, la part d'erreurs, et un quantile de durée (http_request_duration_seconds_bucket). Puis exporte-le
-(Share > Export > JSON) dans project/monitoring/tableau-de-bord.json et relance usine up monitoring : ce qui n'est pas
+(Share > Export > JSON) dans project/monitoring/dashboards/reservations.json et relance usine up monitoring : ce qui n'est pas
 dans project/ disparaît au prochain usine rebuild.
 Le check interroge Grafana sur les tableaux chargés, puis Prometheus sur chaque requête de chaque panneau.
 
@@ -23,7 +23,7 @@ export const checks = [
     label: 'Grafana a chargé ton tableau de bord depuis project/monitoring/',
     run: async (ctx) => {
       const list = await dashboards();
-      assert(list.length > 0, 'Attendu : un tableau de bord chargé depuis project/monitoring/. Constaté : aucun. Exporte-le en JSON dans project/monitoring/tableau-de-bord.json, puis usine up monitoring.');
+      assert(list.length > 0, 'Attendu : un tableau de bord chargé depuis project/monitoring/. Constaté : aucun. Exporte-le en JSON dans project/monitoring/dashboards/, puis usine up monitoring.');
       ctx.state.uid = list[0].uid;
     }
   },

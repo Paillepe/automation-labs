@@ -11,7 +11,7 @@ par webhook à ${RECEIVER_WEBHOOK} (le récepteur de notifications local, fourni
   usine up monitoring
   usine incident erreurs        une panne passagère : une part des requêtes répond 500
 Regarde l'alerte passer de inactive à pending puis firing (Prometheus, Alerts), puis arriver dans Alertmanager
-(http://127.0.0.1:18093) et au récepteur (http://127.0.0.1:18099). Le check attend jusqu'à 3 minutes.
+(http://127.0.0.1:18093) et au récepteur (http://127.0.0.1:18099/notifications). Le check attend jusqu'à 3 minutes.
 
 À expliquer (npx lab submit monitoring alertes) : entre la panne et la notification, combien de temps s'est écoulé, et d'où vient chaque morceau de ce délai ?`;
 
@@ -34,7 +34,7 @@ export const checks = [
     id: 'notification-recue',
     label: `le récepteur local a reçu la notification de ${ALERTS.errors} (jusqu'à 120 s)`,
     run: async () => {
-      await attendre(async () => (await notifications()).some((n) => (n.alerts ?? []).some((a) => a.labels?.alertname === ALERTS.errors)), {
+      await attendre(async () => (await notifications()).some((n) => (n.body?.alerts ?? []).some((a) => a.labels?.alertname === ALERTS.errors)), {
         delai: 120,
         attendu: `une notification de ${ALERTS.errors} reçue`,
         constat: async () => `${(await notifications()).length} notification(s), aucune pour ${ALERTS.errors}. La route d'alertmanager.yml mène-t-elle à ${RECEIVER_WEBHOOK} ?`

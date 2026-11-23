@@ -23,7 +23,10 @@ k8s_versions() {
   cat "$PROJECT"/k8s/*.y*ml 2>/dev/null \
     | sed -nE 's#^[[:space:]-]*image:[[:space:]]*"?([^"[:space:]]*/)?reservations:([0-9][A-Za-z0-9._-]*)"?.*#\2#p' | sort -u
 }
-monitoring_files() { compgen -G "$PROJECT/monitoring/*.y*ml" >/dev/null || compgen -G "$PROJECT/monitoring/*.json" >/dev/null; }
+monitoring_files() {
+  compgen -G "$PROJECT/monitoring/rules/*.y*ml" >/dev/null || [[ -f "$PROJECT/monitoring/alertmanager.yml" ]] \
+    || compgen -G "$PROJECT/monitoring/dashboards/*.json" >/dev/null
+}
 
 require_docker
 echo "usine rebuild — reconstruction depuis project/"

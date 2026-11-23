@@ -9,7 +9,7 @@ export const instructions = `Démarre la supervision et regarde ce qu'elle voit 
   usine up monitoring
   Prometheus (navigateur : http://127.0.0.1:18090), Status > Targets : les pods de l'application sont-ils up ?
   Essaie : sum by (status) (rate(http_requests_total[5m]))
-Écris project/monitoring/alertes.yml : un groupe de règles Prometheus avec trois alertes, nommées exactement
+Écris project/monitoring/rules/alertes.yml : un groupe de règles Prometheus avec trois alertes, nommées exactement
 ${ALERTS.errors} (part des réponses 5xx au-dessus d'un seuil, par exemple 5 % sur 1 minute), ${ALERTS.cpu}
 (CPU des conteneurs de l'application proche de leur limite) et ${ALERTS.memory} (mémoire proche de la limite).
 Les expressions sont libres. Mets un for: court (30 s) à ${ALERTS.errors} : l'étape suivante l'attend.
@@ -32,7 +32,7 @@ export const checks = [
     run: async () => {
       const { activeTargets } = await prom('/api/v1/targets?state=active');
       const app = activeTargets.filter((t) => Object.values({ ...t.labels, ...t.discoveredLabels }).some((v) => /reservations/.test(String(v))));
-      assert(app.length > 0, "Attendu : des cibles de l'application dans Prometheus. Constaté : aucune. Les pods portent-ils le label app.kubernetes.io/name: reservations ?");
+      assert(app.length > 0, "Attendu : des cibles de l'application dans Prometheus. Constaté : aucune. Prometheus collecte les pods dont l'image est reservations:<version>, port 8080 : tes pods tournent-ils ?");
       const down = app.filter((t) => t.health !== 'up');
       assert(down.length === 0, `Attendu : toutes up. Constaté : ${down.length} sur ${app.length} en échec (${down[0]?.lastError ?? '?'}).`);
     }
@@ -43,7 +43,7 @@ export const checks = [
     run: async () => {
       const names = await loadedRules();
       const missing = Object.values(ALERTS).filter((n) => !names.includes(n));
-      assert(missing.length === 0, `Attendu : ${Object.values(ALERTS).join(', ')}. Constaté : il manque ${missing.join(', ')} (chargées : ${names.join(', ') || 'aucune'}). usine up monitoring recharge project/monitoring/alertes.yml.`);
+      assert(missing.length === 0, `Attendu : ${Object.values(ALERTS).join(', ')}. Constaté : il manque ${missing.join(', ')} (chargées : ${names.join(', ') || 'aucune'}). usine up monitoring recharge project/monitoring/rules/.`);
     }
   }
 ];

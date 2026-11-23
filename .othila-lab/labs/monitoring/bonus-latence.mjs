@@ -3,7 +3,7 @@ import { prom } from '../../shared/supervision.mjs';
 
 export const title = 'Bonus — alerter sur la latence';
 export const explain = 'Pourquoi un quantile plutôt qu’une moyenne pour alerter sur la latence ?';
-export const instructions = `Facultatif. Ajoute à alertes.yml une règle HighLatency sur le 95e centile de la durée des requêtes
+export const instructions = `Facultatif. Ajoute à project/monitoring/rules/ une règle HighLatency sur le 95e centile de la durée des requêtes
 (histogram_quantile sur http_request_duration_seconds_bucket), par exemple au-dessus de 500 ms pendant 1 minute.
 Essaie-la avec une latence injectée (en-tête X-Fault-Token: lab-fault-token, POST /fault {"latencyMs":800} sur un pod),
 puis retire la panne (DELETE /fault). Autres pistes, sans check : une règle d'inhibition dans Alertmanager, une vraie
