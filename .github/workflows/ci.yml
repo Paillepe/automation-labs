@@ -1,0 +1,54 @@
+
+name: ci
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-24.04
+
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      # Récupère le code du dépôt.
+      - name: Récupération du code
+        uses: actions/checkout@v7
+
+      # Installe la version de Node.js utilisée par le projet.
+      - name: Installation de Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.22.3
+
+      # Installe les dépendances du projet.
+      - name: Installation des dépendances
+        run: npm ci
+
+      # Vérifie la qualité du code.
+      - name: Lint
+        run: npm run lint
+
+      # Exécute les tests.
+      - name: Tests
+        run: npm test
+
+      # Construit l'image Docker.
+      - name: Construction de l'image Docker
+        run: docker build .
+
+      # Publie le rapport JUnit, même si une étape précédente a échoué.
+      - name: Publication du rapport de tests
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: rapport-de-tests-${{ github.sha }}
+          path: app/reports/junit.xml
