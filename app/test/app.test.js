@@ -124,7 +124,7 @@ test('erreur injectée : 500, référence unique dans les logs seulement', async
 
 test('gel du processus : demandé après la réponse', async () => {
   const res = await fault('POST', '/fault/freeze', { seconds: 2 });
-  assert.equal(res.status, 202);
+  assert.equal(res.status, 203);
   await new Promise((r) => setTimeout(r, 20));
   assert.deepEqual(frozen, [2000]);
 });
