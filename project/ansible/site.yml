@@ -1,0 +1,6 @@
+- name: Déployer l'application reservations
+  hosts: web
+  become: true
+
+  roles:
+    - reservations

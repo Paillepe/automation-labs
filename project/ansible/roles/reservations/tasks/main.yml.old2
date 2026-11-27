@@ -1,0 +1,63 @@
+# Rôle reservations
+# Les tâches suivent les étapes du script deploy.sh.
+# Chaque section correspond à une opération du déploiement.
+
+# ============================================================
+# 1. Récupérer le code
+# ============================================================
+# deploy.sh : git rev-parse, git archive
+# Sur le poste de contrôle (Dev Container), une seule fois :
+# - delegate_to: localhost : exécuter localement.
+# - run_once: true : ne pas répéter pour chaque serveur.
+# - become: false : ne pas utiliser les privilèges administrateur.
+#
+# Fabriquer l'archive build_archive contenant :
+# - src
+# - package.json et les fichiers nécessaires à l'installation
+# - node_modules (dépendances de production uniquement).
+#
+# creates: permet de ne pas reconstruire une archive déjà présente.
+
+
+# ============================================================
+# 2. Installer les prérequis
+# ============================================================
+# deploy.sh : npm ci (le pipeline effectue déjà les tests)
+# - Installer les paquets système nécessaires (apt).
+# - Créer l'utilisateur applicatif (user).
+# - Définir APP_USER dans /etc/default/reservations (lineinfile).
+
+
+# ============================================================
+# 3. Livrer l'application
+# ============================================================
+# deploy.sh : tar ... | ssh ... tar -x -C /opt/reservations
+# - Copier l'archive sur le serveur (copy).
+# - Extraire l'archive dans /opt/reservations (unarchive).
+
+
+# ============================================================
+# 4. Écrire la configuration
+# ============================================================
+# deploy.sh : printf ... > /etc/reservations/reservations.env
+# - Utiliser templates/reservations.env.j2.
+# - Générer /etc/reservations/reservations.env (template).
+
+
+# ============================================================
+# 5. Redémarrer le service
+# ============================================================
+# deploy.sh : sudo service reservations restart
+# - Redémarrer uniquement si une tâche a modifié quelque chose.
+# - Utiliser notify pour déclencher le handler.
+# - Exécuter ansible.builtin.meta: flush_handlers.
+# - S'assurer que le service est démarré dans tous les cas
+#   (ansible.builtin.service, state: started).
+
+
+# ============================================================
+# 6. Vérifier le déploiement
+# ============================================================
+# deploy.sh : curl --retry .../health
+# - Vérifier http://localhost:8080/ready avec ansible.builtin.uri.
+# - Utiliser retries et until pour gérer les délais de démarrage.
